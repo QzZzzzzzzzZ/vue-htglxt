@@ -1,0 +1,413 @@
+<template>
+  <div class="app-container calendar-list-container">
+    <div class="filter-container">
+      <el-input
+        @keyup.enter.native="handleFilter"
+        style="width: 200px;"
+        class="filter-item"
+        :placeholder="'table.title'"
+        v-model="listQuery.title"
+      ></el-input>
+      <el-select
+        clearable
+        style="width: 90px"
+        class="filter-item"
+        v-model="listQuery.importance"
+        :placeholder="'table.importance'"
+      >
+        <el-option v-for="item in importanceOptions" :key="item" :label="item" :value="item"></el-option>
+      </el-select>
+      <el-select
+        clearable
+        class="filter-item"
+        style="width: 130px"
+        v-model="listQuery.type"
+        :placeholder="'table.type'"
+      >
+        <el-option
+          v-for="item in  calendarTypeOptions"
+          :key="item.key"
+          :label="item.display_name+'('+item.key+')'"
+          :value="item.key"
+        ></el-option>
+      </el-select>
+      <el-select
+        @change="handleFilter"
+        style="width: 140px"
+        class="filter-item"
+        v-model="listQuery.sort"
+      >
+        <el-option
+          v-for="item in sortOptions"
+          :key="item.key"
+          :label="item.label"
+          :value="item.key"
+        ></el-option>
+      </el-select>
+      <el-button
+        class="filter-item"
+        type="primary"
+        v-waves
+        icon="el-icon-search"
+        @click="handleFilter"
+      >{{'table.search'}}</el-button>
+      <el-button
+        class="filter-item"
+        style="margin-left: 10px;"
+        @click="handleCreate"
+        type="primary"
+        icon="el-icon-edit"
+      >{{'table.add'}}</el-button>
+      <el-button
+        class="filter-item"
+        type="primary"
+        :loading="downloadLoading"
+        v-waves
+        icon="el-icon-download"
+        @click="handleDownload"
+      >{{'table.export'}}</el-button>
+    </div>
+
+    <el-table
+      :key="tableKey"
+      :data="list"
+      v-loading="listLoading"
+      element-loading-text="给我一点时间"
+      border
+      fit
+      highlight-current-row
+      style="width: 100%"
+    >
+      <el-table-column align="center" :label="'table.id'" width="65">
+        <template slot-scope="scope">
+          <span>{{scope.row.id}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" prop="ch" label="车号" />
+      <el-table-column align="center" prop="wz" label="物资" />
+      <el-table-column align="center" label="过毛时间">
+        <template slot-scope="scope">
+          <span>{{scope.row.timestamp | parseTime('{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" prop="fz" label="发站" />
+      <el-table-column align="center" prop="qx" label="去向" />
+      <el-table-column align="center" prop="gd" label="股道" />
+      <el-table-column
+        align="center"
+        :label="'table.actions'"
+        class-name="small-padding fixed-width"
+      >
+        <template slot-scope="scope">
+          <el-button type="primary" size="mini" @click="handleUpdate(scope.row)">{{'table.edit'}}</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <div class="pagination-container">
+      <el-pagination
+        background
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        :current-page.sync="listQuery.page"
+        :page-sizes="[10,20,30, 50]"
+        :page-size="listQuery.limit"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="total"
+      ></el-pagination>
+    </div>
+
+    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
+      <el-form
+        :rules="rules"
+        ref="dataForm"
+        :model="temp"
+        label-position="left"
+        label-width="90px"
+        style="width: 400px; margin-left:50px;"
+      >
+        <el-form-item label="车号" prop="ch">
+          <el-select class="filter-item" v-model="temp.type" placeholder="请选择">
+            <el-option
+              v-for="item in  calendarTypeOptions"
+              :key="item.key"
+              :label="item.display_name"
+              :value="item.key"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="过毛时间" prop="gmsj">
+          <el-date-picker v-model="temp.timestamp" type="datetime" placeholder="请选择时间"></el-date-picker>
+        </el-form-item>
+        <el-form-item label="物资" prop="wz">
+          <el-input v-model="temp.wz"></el-input>
+        </el-form-item>
+        <el-form-item label="发站">
+          <el-select class="filter-item" v-model="temp.fz" placeholder="请选择">
+            <el-option v-for="item in  statusOptions" :key="item" :label="item" :value="item"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="去向">
+          <el-select class="filter-item" v-model="temp.qx" placeholder="请选择">
+            <el-option v-for="item in  statusOptions" :key="item" :label="item" :value="item"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="股道">
+          <el-select class="filter-item" v-model="temp.gd" placeholder="请选择">
+            <el-option v-for="item in  statusOptions" :key="item" :label="item" :value="item"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="dialogFormVisible = false">{{'table.cancel'}}</el-button>
+        <el-button
+          v-if="dialogStatus=='create'"
+          type="primary"
+          @click="createData"
+        >{{'table.confirm'}}</el-button>
+        <el-button v-else type="primary" @click="updateData">{{'table.confirm'}}</el-button>
+      </div>
+    </el-dialog>
+
+    <el-dialog title="Reading statistics" :visible.sync="dialogPvVisible">
+      <el-table :data="pvData" border fit highlight-current-row style="width: 100%">
+        <el-table-column prop="key" label="Channel"></el-table-column>
+        <el-table-column prop="pv" label="Pv"></el-table-column>
+      </el-table>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="dialogPvVisible = false">{{'table.confirm'}}</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import {
+  fetchList,
+  fetchPv,
+  createArticle,
+  updateArticle,
+} from "@/api/article";
+import waves from "@/directive/waves"; // 水波纹指令
+import { parseTime } from "@/utils";
+
+const calendarTypeOptions = [
+  { key: "CN", display_name: "China" },
+  { key: "US", display_name: "USA" },
+  { key: "JP", display_name: "Japan" },
+  { key: "EU", display_name: "Eurozone" },
+];
+
+const calendarTypeKeyValue = calendarTypeOptions.reduce((acc, cur) => {
+  acc[cur.key] = cur.display_name;
+  return acc;
+}, {});
+
+export default {
+  name: "inFactory",
+  directives: {
+    waves,
+  },
+  data() {
+    return {
+      tableKey: 0,
+      list: null,
+      total: null,
+      listLoading: true,
+      listQuery: {
+        page: 1,
+        limit: 10,
+        importance: undefined,
+        title: undefined,
+        type: undefined,
+        sort: "+id",
+      },
+      importanceOptions: [1, 2, 3],
+      calendarTypeOptions,
+      sortOptions: [
+        { label: "ID Ascending", key: "+id" },
+        { label: "ID Descending", key: "-id" },
+      ],
+      statusOptions: ["A", "B", "C"],
+      showReviewer: false,
+      temp: {
+        id: undefined,
+        importance: 1,
+        remark: "",
+        timestamp: new Date(),
+        title: "",
+        type: "",
+        status: "published",
+      },
+      dialogFormVisible: false,
+      dialogStatus: "",
+      textMap: {
+        update: "修改",
+        create: "新增",
+      },
+      dialogPvVisible: false,
+      pvData: [],
+      rules: {
+        type: [
+          { required: true, message: "type is required", trigger: "change" },
+        ],
+        timestamp: [
+          {
+            type: "date",
+            required: true,
+            message: "timestamp is required",
+            trigger: "change",
+          },
+        ],
+        title: [
+          { required: true, message: "title is required", trigger: "blur" },
+        ],
+      },
+      downloadLoading: false,
+    };
+  },
+  filters: {
+    statusFilter(status) {
+      const statusMap = {
+        published: "success",
+        draft: "info",
+        deleted: "danger",
+      };
+      return statusMap[status];
+    },
+    typeFilter(type) {
+      return calendarTypeKeyValue[type];
+    },
+  },
+  created() {
+    this.getList();
+  },
+  methods: {
+    getList() {
+      this.listLoading = true;
+      fetchList(this.listQuery).then((response) => {
+        this.list = response.data.items;
+        this.total = response.data.total;
+        this.listLoading = false;
+      });
+    },
+    handleFilter() {
+      this.listQuery.page = 1;
+      this.getList();
+    },
+    handleSizeChange(val) {
+      this.listQuery.limit = val;
+      this.getList();
+    },
+    handleCurrentChange(val) {
+      this.listQuery.page = val;
+      this.getList();
+    },
+    handleModifyStatus(row, status) {
+      this.$message({
+        message: "操作成功",
+        type: "success",
+      });
+      row.status = status;
+    },
+    resetTemp() {
+      this.temp = {
+        id: undefined,
+        importance: 1,
+        remark: "",
+        timestamp: new Date(),
+        title: "",
+        status: "published",
+        type: "",
+      };
+    },
+    handleCreate() {
+      this.resetTemp();
+      this.dialogStatus = "create";
+      this.dialogFormVisible = true;
+      this.$nextTick(() => {
+        this.$refs["dataForm"].clearValidate();
+      });
+    },
+    createData() {
+      this.$refs["dataForm"].validate((valid) => {
+        if (valid) {
+          this.temp.id = parseInt(Math.random() * 100) + 1024; // mock a id
+          this.temp.author = "vue-element-admin";
+          createArticle(this.temp).then(() => {
+            this.list.unshift(this.temp);
+            this.dialogFormVisible = false;
+            this.$notify({
+              title: "成功",
+              message: "创建成功",
+              type: "success",
+              duration: 2000,
+            });
+          });
+        }
+      });
+    },
+    handleUpdate(row) {
+      this.temp = Object.assign({}, row); // copy obj
+      this.temp.timestamp = new Date(this.temp.timestamp);
+      this.dialogStatus = "update";
+      this.dialogFormVisible = true;
+      this.$nextTick(() => {
+        this.$refs["dataForm"].clearValidate();
+      });
+    },
+    updateData() {
+      this.$refs["dataForm"].validate((valid) => {
+        if (valid) {
+          const tempData = Object.assign({}, this.temp);
+          tempData.timestamp = +new Date(tempData.timestamp); // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
+          updateArticle(tempData).then(() => {
+            for (const v of this.list) {
+              if (v.id === this.temp.id) {
+                const index = this.list.indexOf(v);
+                this.list.splice(index, 1, this.temp);
+                break;
+              }
+            }
+            this.dialogFormVisible = false;
+            this.$notify({
+              title: "成功",
+              message: "更新成功",
+              type: "success",
+              duration: 2000,
+            });
+          });
+        }
+      });
+    },
+    handleDelete(row) {
+      this.$notify({
+        title: "成功",
+        message: "删除成功",
+        type: "success",
+        duration: 2000,
+      });
+      const index = this.list.indexOf(row);
+      this.list.splice(index, 1);
+    },
+    handleFetchPv(pv) {
+      fetchPv(pv).then((response) => {
+        this.pvData = response.data.pvData;
+        this.dialogPvVisible = true;
+      });
+    },
+    handleDownload() {},
+    formatJson(filterVal, jsonData) {
+      return jsonData.map((v) =>
+        filterVal.map((j) => {
+          if (j === "timestamp") {
+            return parseTime(v[j]);
+          } else {
+            return v[j];
+          }
+        })
+      );
+    },
+  },
+};
+</script>
