@@ -126,7 +126,7 @@ export const constantRoutes = [
         name: "dict",
         meta: {
           title: "字典管理",
-          icon: "documentation",
+          icon: "nested",
           roles: ["admin"], // or you can only set roles in sub nav
         },
       },
@@ -144,7 +144,7 @@ export const constantRoutes = [
         name: "permission",
         meta: {
           title: "权限管理",
-          icon: "lock",
+          icon: "password",
           roles: ["admin"], // or you can only set roles in sub nav
         },
       },

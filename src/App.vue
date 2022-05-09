@@ -6,6 +6,13 @@
 
 <script>
 export default {
-  name: 'App'
-}
+  name: "App",
+};
 </script>
+
+<style>
+.pagination-container {
+  margin-top: 10px;
+  float: right;
+}
+</style>

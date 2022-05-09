@@ -21,10 +21,10 @@ export function getInfo(token) {
     method: "get",
   });
 }
-
-export function logout() {
+//  根据姓名 拼音 电话查询用户
+export function getUser(query) {
   return request({
-    url: "/vue-admin-template/user/logout",
-    method: "post",
+    url: authUrl + `/auth/user/listUser?query=${query}`,
+    method: "get",
   });
 }
