@@ -16,13 +16,14 @@ export function addUser(data) {
     data: qs.stringify(data),
   });
 }
-
+// 查询用户区域信息
 export function searchUser(userId) {
   return request({
     url: baseUrl + `/region/${userId}`,
     method: "get",
   });
 }
+// 查询用户区域信息下的股道信息
 export function searchUserByParent(userId, parentId) {
   return request({
     url: baseUrl + `/search/${userId}/${parentId}`,

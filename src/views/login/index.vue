@@ -1,59 +1,60 @@
 <template>
   <div class="login-container">
-    <el-form
-      ref="loginForm"
-      :model="loginForm"
-      :rules="loginRules"
-      class="login-form"
-      auto-complete="on"
-      label-position="left"
-    >
-      <div class="title-container">
-        <h3 class="title">登 录</h3>
-      </div>
+    <div class="login_win">
+      <el-form
+        ref="loginForm"
+        :model="loginForm"
+        class="login-form"
+        auto-complete="on"
+        label-position="left"
+      >
+        <div class="title-container">
+          <h3 class="title">登 录</h3>
+        </div>
 
-      <el-form-item prop="username">
-        <span class="svg-container">
-          <svg-icon icon-class="user" />
-        </span>
-        <el-input
-          ref="username"
-          v-model="loginForm.username"
-          placeholder="Username"
-          name="username"
-          type="text"
-          tabindex="1"
-          auto-complete="on"
-        />
-      </el-form-item>
+        <el-form-item prop="username">
+          <span class="svg-container">
+            <svg-icon icon-class="user" />
+          </span>
+          <el-input
+            ref="username"
+            v-model="loginForm.username"
+            placeholder="用户名"
+            name="username"
+            type="text"
+            tabindex="1"
+            auto-complete="on"
+          />
+        </el-form-item>
 
-      <el-form-item prop="password">
-        <span class="svg-container">
-          <svg-icon icon-class="password" />
-        </span>
-        <el-input
-          :key="passwordType"
-          ref="password"
-          v-model="loginForm.password"
-          :type="passwordType"
-          placeholder="Password"
-          name="password"
-          tabindex="2"
-          auto-complete="on"
-          @keyup.enter.native="handleLogin"
-        />
-        <span class="show-pwd" @click="showPwd">
-          <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
-        </span>
-      </el-form-item>
-
-      <el-button
-        :loading="loading"
-        type="primary"
-        style="width:100%;margin-bottom:30px;"
-        @click.native.prevent="handleLogin"
-      >登录</el-button>
-    </el-form>
+        <el-form-item prop="password">
+          <span class="svg-container">
+            <svg-icon icon-class="password" />
+          </span>
+          <el-input
+            :key="passwordType"
+            ref="password"
+            v-model="loginForm.password"
+            :type="passwordType"
+            placeholder="密码"
+            name="password"
+            tabindex="2"
+            auto-complete="on"
+            @keyup.enter.native="handleLogin"
+          />
+          <span class="show-pwd" @click="showPwd">
+            <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
+          </span>
+        </el-form-item>
+        <el-checkbox v-model="checked" class="login_checked">记住密码</el-checkbox>
+        <el-button
+          :loading="loading"
+          type="primary"
+          style="width:100%;margin-bottom:30px;"
+          @click.native.prevent="handleLogin"
+        >登录</el-button>
+      </el-form>
+    </div>
   </div>
 </template>
 
@@ -65,21 +66,16 @@ export default {
   data() {
     const validatePassword = (rule, value, callback) => {
       if (value.length < 6) {
-        callback(new Error("The password can not be less than 6 digits"));
+        callback(new Error("请输入密码"));
       } else {
         callback();
       }
     };
     return {
+      checked: false,
       loginForm: {
-        username: "yuhc8621",
-        password: "Yuhc8621",
-      },
-      loginRules: {
-        username: [{ required: true, trigger: "blur" }],
-        password: [
-          { required: true, trigger: "blur", validator: validatePassword },
-        ],
+        username: "",
+        password: "",
       },
       loading: false,
       passwordType: "password",
@@ -93,6 +89,12 @@ export default {
       },
       immediate: true,
     },
+  },
+  mounted() {
+    this.getCookie();
+    if (this.loginForm.password) {
+      this.checked = true;
+    }
   },
   methods: {
     showPwd() {
@@ -109,6 +111,21 @@ export default {
       this.$refs.loginForm.validate((valid) => {
         if (valid) {
           this.loading = true;
+          if (!this.loginForm.username || !this.loginForm.password) {
+            this.loading = false;
+            this.$message({
+              message: "请输入用户名或密码",
+              type: "error",
+            });
+            return;
+          }
+          if (this.checked == true) {
+            //传入账号名，密码，和保存天数3个参数
+            this.setCookie(this.loginForm.username, this.loginForm.password, 3);
+          } else {
+            //清空Cookie
+            this.clearCookie();
+          }
           this.$store
             .dispatch("user/login", this.loginForm)
             .then(() => {
@@ -123,6 +140,36 @@ export default {
           return false;
         }
       });
+    },
+    //设置cookie
+    setCookie(c_name, c_pwd, exdays) {
+      var exdate = new Date(); //获取时间
+      exdate.setTime(exdate.getTime() + 24 * 60 * 60 * 1000 * exdays); //保存的天数
+      //字符串拼接cookie
+      window.document.cookie =
+        "userName" + "=" + c_name + ";path=/;expires=" + exdate.toGMTString();
+      window.document.cookie =
+        "userPwd" + "=" + c_pwd + ";path=/;expires=" + exdate.toGMTString();
+    },
+    //读取cookie
+    getCookie: function () {
+      if (document.cookie.length > 0) {
+        var arr = document.cookie.split("; "); //这里显示的格式需要切割一下自己可输出看下
+        for (var i = 0; i < arr.length; i++) {
+          var arr2 = arr[i].split("="); //再次切割
+          //判断查找相对应的值
+          if (arr2[0] == "userName") {
+            this.loginForm.username = arr2[1]; //保存到保存数据的地方
+          } else if (arr2[0] == "userPwd") {
+            this.loginForm.password = arr2[1];
+          }
+        }
+      }
+    },
+    //清除cookie
+    clearCookie: function () {
+      console.log("clearCookie");
+      this.setCookie("", "", -1); //修改2值都为空，天数为负1天就好了
     },
   },
 };
@@ -185,7 +232,11 @@ $light_gray: #eee;
   width: 100%;
   background-color: $bg;
   overflow: hidden;
-
+  .login_win {
+    width: 520px;
+    max-width: 100%;
+    margin: 0 auto;
+  }
   .login-form {
     position: relative;
     width: 520px;
@@ -194,7 +245,12 @@ $light_gray: #eee;
     margin: 0 auto;
     overflow: hidden;
   }
-
+  .login_checked {
+    position: relative;
+    left: 370px;
+    margin-bottom: 10px;
+    color: #eee;
+  }
   .tips {
     font-size: 14px;
     color: #fff;

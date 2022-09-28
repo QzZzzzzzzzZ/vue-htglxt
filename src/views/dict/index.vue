@@ -1,10 +1,15 @@
 <template>
   <div class="container">
     <div class="left-container">
-      <el-tree :data="sideNav" :props="defaultProps" @node-click="handleNodeClick"></el-tree>
+      <el-tree
+        default-expand-all
+        :data="sideNav"
+        :props="defaultProps"
+        @node-click="handleNodeClick"
+      ></el-tree>
     </div>
     <div class="right-container">
-      <dir-table v-if="show" :parentId="parentId" />
+      <dir-table v-if="show" :parentId="parentId" @upTree="getSideNav" />
     </div>
   </div>
 </template>

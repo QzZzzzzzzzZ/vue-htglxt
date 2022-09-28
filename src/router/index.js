@@ -16,7 +16,7 @@ import Layout from "@/layout";
  * redirect: noRedirect，如果设置为noRedirect，则breadcrumb中不会有重定向
  * Name:'router-name'，该名称由<keep-alive>使用(必须设置!!)
  * 元:{
- * 角色:['admin'，'editor']控制页面角色(您可以设置多个角色)
+ * roles:['admin'，'editor']控制页面角色(您可以设置多个角色)
  * 标题:' Title '显示在侧边栏和面包屑中的名称(建议设置)
  * 图标:'svg-name'/'el-icon-x'显示在侧边栏的图标
  * 面包屑:false，如果设置为false，项目将隐藏在面包屑中(默认为true)
@@ -62,56 +62,92 @@ export const constantRoutes = [
   // 404 page must be placed at the end !!!
   { path: "*", redirect: "/404", hidden: true },
   {
-    path: "/submit",
+    path: "/index",
     component: Layout,
-    redirect: "noredirect",
+    redirect: "noRedirect",
     name: "submit",
     meta: {
       title: "停时登记",
       icon: "form",
+      roles: [
+        "adminTest",
+        "controlTest",
+        "logisticsAdmin",
+        "logistics",
+        "sampling",
+        "unload",
+        "load",
+      ],
     },
+    alwaysShow: true,
     children: [
       {
         path: "inFactory",
         component: () => import("@/views/submitPage/inFactory"),
         name: "inFactory",
-        meta: { title: "入厂登记" },
+        meta: {
+          title: "数据修改",
+          roles: ["adminTest", "logisticsAdmin"],
+        },
       },
       {
         path: "sendCar",
         component: () => import("@/views/submitPage/sendCar"),
         name: "sendCar",
-        meta: { title: "送车登记" },
+        meta: {
+          title: "火车管理",
+          roles: ["adminTest", "logisticsAdmin", "logistics"],
+        },
       },
       {
         path: "finalSample",
         component: () => import("@/views/submitPage/finalSample"),
         name: "finalSample",
-        meta: { title: "取样完成登记" },
+        meta: {
+          title: "取样登记",
+          roles: ["controlTest", "adminTest", "sampling"],
+        },
       },
       {
         path: "reportEmpty",
         component: () => import("@/views/submitPage/reportEmpty"),
         name: "reportEmpty",
-        meta: { title: "报空登记" },
+        meta: {
+          title: "报空登记",
+          roles: ["controlTest", "adminTest", "unload"],
+        },
       },
       {
         path: "finalLoad",
         component: () => import("@/views/submitPage/finalLoad"),
         name: "finalLoad",
-        meta: { title: "装好登记" },
+        meta: {
+          title: "装好登记",
+          roles: ["controlTest", "adminTest", "load"],
+        },
       },
+    ],
+  },
+  {
+    path: "/data",
+    component: Layout,
+    redirect: "noRedirect",
+    name: "submit",
+    meta: {
+      title: "数据报表",
+      icon: "table",
+      roles: ["adminTest", "logisticsAdmin", "logistics"],
+    },
+    alwaysShow: true,
+    children: [
       {
-        path: "outFactory",
-        component: () => import("@/views/submitPage/outFactory"),
-        name: "outFactory",
-        meta: { title: "出厂登记" },
-      },
-      {
-        path: "walkthrough",
-        component: () => import("@/views/submitPage/walkthrough"),
-        name: "walkthrough",
-        meta: { title: "预排登记" },
+        path: "carInfo",
+        component: () => import("@/views/submitPage/carInfo"),
+        name: "carInfo",
+        meta: {
+          title: "车辆信息",
+          roles: ["adminTest", "logisticsAdmin", "logistics"],
+        },
       },
     ],
   },
@@ -119,6 +155,9 @@ export const constantRoutes = [
     path: "/dict",
     component: Layout,
     redirect: "/dict/index",
+    meta: {
+      roles: ["adminTest", "admin"],
+    },
     children: [
       {
         path: "index",
@@ -127,7 +166,7 @@ export const constantRoutes = [
         meta: {
           title: "字典管理",
           icon: "nested",
-          roles: ["admin"], // or you can only set roles in sub nav
+          roles: ["adminTest", "admin"], // or you can only set roles in sub nav
         },
       },
     ],
@@ -136,7 +175,7 @@ export const constantRoutes = [
     path: "/permission",
     component: Layout,
     redirect: "/permission/index",
-    meta: { roles: ["admin"] }, // you can set roles in root nav
+    meta: { roles: ["adminTest", "admin"] }, // you can set roles in root nav
     children: [
       {
         path: "index",
@@ -145,7 +184,7 @@ export const constantRoutes = [
         meta: {
           title: "权限管理",
           icon: "password",
-          roles: ["admin"], // or you can only set roles in sub nav
+          roles: ["adminTest", "admin"], // or you can only set roles in sub nav
         },
       },
     ],

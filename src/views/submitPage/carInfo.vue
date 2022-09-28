@@ -2,49 +2,78 @@
   <div class="app-container calendar-list-container">
     <div class="filter-container">
       <!-- 搜索 start -->
-      <el-form :model="listQuery" ref="queryForm" :inline="true" label-width="80px">
+      <el-form :model="listQuery" ref="queryForm" :inline="true" label-width="60px">
+        <el-form-item label="入厂时间" label-width="80px">
+          <el-date-picker
+            unlink-panels
+            v-model="date"
+            size="small"
+            style="width:230px"
+            value-format="yyyy-MM-dd HH:mm:ss"
+            type="datetimerange"
+            range-separator="-"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+          ></el-date-picker>
+        </el-form-item>
+        <el-form-item label="股道" prop="currentTrackName">
+          <el-input
+            v-model="listQuery.currentTrackName"
+            placeholder="股道"
+            clearable
+            size="small"
+            style="width: 100px"
+            @keyup.enter.native="handleQuery"
+          />
+        </el-form-item>
         <el-form-item label="车号" prop="carCode">
           <el-input
             v-model="listQuery.carCode"
-            placeholder="请输入车号"
+            placeholder="车号"
             clearable
             size="small"
-            style="width: 180px"
+            style="width: 100px"
             @keyup.enter.native="handleQuery"
           />
         </el-form-item>
         <el-form-item label="物资" prop="materialName">
           <el-input
             v-model="listQuery.materialName"
-            placeholder="请输入物资名称"
+            placeholder="物资名称"
             clearable
             size="small"
-            style="width: 180px"
+            style="width: 100px"
             @keyup.enter.native="handleQuery"
           />
         </el-form-item>
         <el-form-item label="发站" prop="sourceName">
           <el-input
             v-model="listQuery.sourceName"
-            placeholder="请输入发站"
+            placeholder="发站"
             clearable
             size="small"
-            style="width: 120px"
+            style="width: 80px"
             @keyup.enter.native="handleQuery"
           />
         </el-form-item>
         <el-form-item label="去向" prop="targetName">
           <el-input
             v-model="listQuery.targetName"
-            placeholder="请输入去向"
+            placeholder="去向"
             clearable
             size="small"
-            style="width: 120px"
+            style="width: 80px"
             @keyup.enter.native="handleQuery"
           />
         </el-form-item>
         <el-form-item label="状态" prop="status">
-          <el-select v-model="listQuery.status" placeholder="状态" size="small" style="width: 120px">
+          <el-select
+            clearable
+            v-model="listQuery.status"
+            placeholder="状态"
+            size="small"
+            style="width: 120px"
+          >
             <el-option
               v-for="order in statusOptions"
               :key="order.key"
@@ -54,28 +83,33 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="入厂时间">
-          <el-date-picker
-            unlink-panels
-            v-model="listQuery.date"
-            size="small"
-            style="width: 180px"
-            value-format="yyyy-MM-dd"
-            type="daterange"
-            range-separator="-"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-          ></el-date-picker>
-        </el-form-item>
         <el-form-item>
           <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
-          <el-button type="primary" size="mini" plain @click="showForm('送检')">送检</el-button>
-          <el-button type="primary" size="mini" plain @click="showForm('送妥')">送妥</el-button>
-          <el-button type="primary" size="mini" plain @click="showForm('送装')">送装</el-button>
+          <el-button
+            type="warning"
+            plain
+            icon="el-icon-download"
+            size="mini"
+            @click="handleExport"
+          >导出</el-button>
           <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
         </el-form-item>
       </el-form>
     </div>
+
+    <el-row class="row_win">
+      <el-col :span="24">
+        <div class>
+          <span class="el-form-item__label">表头编辑</span>
+          <el-checkbox
+            v-for="(item,index) in columnList"
+            :key="index"
+            :disabled="index==0"
+            v-model="item.value"
+          >{{item.label}}</el-checkbox>
+        </div>
+      </el-col>
+    </el-row>
 
     <el-table
       ref="multipleTable"
@@ -90,18 +124,84 @@
       highlight-current-row
       style="width: 100%"
     >
-      <el-table-column type="selection" width="55"></el-table-column>
-      <el-table-column align="center" prop="carCode" label="车号" />
-      <el-table-column align="center" prop="materialName" label="物资" width="200" />
-      <el-table-column align="center" label="入厂时间">
+      <el-table-column v-if="columnList[0].value" align="center" prop="carCode" label="车号" />
+      <el-table-column
+        v-if="columnList[1].value"
+        align="center"
+        prop="sourceName"
+        width="60"
+        label="发站"
+      />
+      <el-table-column
+        v-if="columnList[2].value"
+        align="center"
+        prop="materialName"
+        label="物资"
+        width="200"
+      />
+      <el-table-column
+        v-if="columnList[3].value"
+        align="center"
+        prop="targetName"
+        width="60"
+        label="去向"
+      />
+      <el-table-column
+        v-if="columnList[4].value"
+        align="center"
+        prop="currentTrackName"
+        label="当前股道"
+      />
+      <el-table-column v-if="columnList[5].value" align="center" label="入厂时间" width="100">
         <template slot-scope="scope">
-          <span>{{scope.row.timestamp }}</span>
+          <span>{{parseTime(scope.row.grossTime,'{y}-{m}-{d} {h}:{i}')}}</span>
         </template>
       </el-table-column>
-      <el-table-column align="center" prop="sourceName" label="发站" />
-      <el-table-column align="center" prop="targetName" label="去向" />
-      <el-table-column align="center" prop="currentTrackName" label="股道" />
-      <el-table-column align="center" prop="status" label="状态">
+      <el-table-column v-if="columnList[6].value" align="center" label="送检时间" width="100">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.sendCheckTime,'{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column v-if="columnList[7].value" align="center" label="取样完成时间" width="105">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.sampleCompleteTime,'{y}-{m}-{d}')}}</span>
+          <br />
+          <span>{{parseTime(scope.row.sampleCompleteTime,'{h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column v-if="columnList[8].value" align="center" label="送妥时间" width="100">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.sendProperlyTime,'{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column v-if="columnList[9].value" align="center" label="送装时间" width="100">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.sendPackTime,'{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column v-if="columnList[10].value" align="center" label="装好时间" width="100">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.packCompleteTime,'{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column v-if="columnList[11].value" align="center" label="出厂时间" width="100">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.leaveFactoryTime,'{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column v-if="columnList[12].value" align="center" label="预排时间" width="100">
+        <template slot-scope="scope">
+          <span>{{parseTime(scope.row.arrangementTime,'{y}-{m}-{d} {h}:{i}')}}</span>
+        </template>
+      </el-table-column>
+      <el-table-column
+        v-if="columnList[13].value"
+        align="center"
+        prop="trackNames"
+        width="80"
+        label="股道记录"
+      />
+      <el-table-column v-if="columnList[14].value" align="center" prop="status" label="状态">
         <template slot-scope="scope">
           <el-tag v-if="scope.row.status=='SEND_CHECK'">送检</el-tag>
           <el-tag v-else-if="scope.row.status=='COMPLETE_CHECK'" type="success">取样完成</el-tag>
@@ -117,14 +217,6 @@
           <el-tag v-else>待操作</el-tag>
         </template>
       </el-table-column>
-      <el-table-column align="center" :label="'操作'" class-name="small-padding fixed-width">
-        <template
-          slot-scope="scope"
-          v-if="scope.row.status=='SEND_CHECK'||scope.row.status=='SEND_PROPERLY'||scope.row.status=='SEND_PACK'"
-        >
-          <el-link type="primary" @click="handleBack(scope.row)">撤回</el-link>
-        </template>
-      </el-table-column>
     </el-table>
 
     <div class="pagination-container">
@@ -133,74 +225,20 @@
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
         :current-page.sync="pageQuery.page"
-        :page-sizes="[10,20,30, 50]"
+        :page-sizes="[50,100,150,200,250,300]"
         :page-size="pageQuery.limit"
         layout="total, sizes, prev, pager, next, jumper"
         :total="total"
       ></el-pagination>
     </div>
-
-    <el-dialog :title="dialogTitle" width="440px" :visible.sync="dialogFormVisible">
-      <el-form
-        :rules="rules"
-        ref="dataForm"
-        :model="temp"
-        label-position="left"
-        label-width="90px"
-        style="width: 400px; margin-left:50px;"
-      >
-        <el-form-item label="区域" prop="reginId">
-          <el-select
-            class="filter-item"
-            v-model="temp.reginId"
-            filterable
-            @change="selectRegion"
-            placeholder="请选择"
-          >
-            <el-option
-              v-for="item in  regionOptions"
-              :key="item.keyId"
-              :label="item.keyValue"
-              :value="item.keyId"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="股道" prop="trackId">
-          <el-select
-            class="filter-item"
-            v-model="temp.trackId"
-            filterable
-            no-data-text="请先选择区域"
-            @change="selectTrack"
-            placeholder="请选择"
-          >
-            <el-option
-              v-for="item in  trackOptions"
-              :key="item.keyId"
-              :label="item.keyValue"
-              :value="item.keyId"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="操作时间" prop="operatorTime">
-          <el-date-picker v-model="temp.operatorTime" type="datetime" placeholder="选择日期"></el-date-picker>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible = false">取消</el-button>
-        <el-button type="primary" @click="updateData">确定</el-button>
-      </div>
-    </el-dialog>
   </div>
 </template>
 
 <script>
-import { fetchList } from "@/api/article";
-import { loginSend, backWl } from "@/api/api";
-import { searchByParentId } from "@/api/dict.js";
+import { getAllRport } from "@/api/article";
 import { searchUser } from "@/api/auth.js";
 import waves from "@/directive/waves"; // 水波纹指令
+import moment from "moment";
 import { parseTime } from "@/utils";
 
 export default {
@@ -218,20 +256,36 @@ export default {
         page: 1,
         limit: 50,
       },
+      date: [
+        moment()
+          .subtract(30, "days")
+          .startOf("day")
+          .format("YYYY-MM-DD 00:00:00"),
+        moment()
+          .subtract(0, "days")
+          .startOf("day")
+          .format("YYYY-MM-DD 23:59:59"),
+      ],
       listQuery: {
         status: null,
         sourceName: undefined,
         targetName: undefined,
         carCode: undefined,
-        startDate: undefined,
-        endDate: undefined,
+        startDate: moment()
+          .subtract(30, "days")
+          .startOf("day")
+          .format("YYYY-MM-DD 00:00:00"),
+        endDate: moment()
+          .subtract(0, "days")
+          .startOf("day")
+          .format("YYYY-MM-DD 23:59:59"),
       },
       statusOptions: [
-        { label: "待操作", key: null },
         { label: "登记", key: "REGISTER" },
         { label: "送检", key: "SEND_CHECK" },
         { label: "取样完成", key: "COMPLETE_CHECK" },
         { label: "送妥", key: "SEND_PROPERLY" },
+        { label: "报空", key: "COMPLETE_EMPTY" },
         { label: "送装", key: "SEND_PACK" },
         { label: "装好", key: "COMPLETE_PACK" },
         { label: "出厂", key: "LEAVE_FACTORY" },
@@ -242,7 +296,7 @@ export default {
       temp: {
         operatorType: undefined, //操作类型
         recodeId: "", //数据编号
-        trackName: "",
+        currentTrackName: "",
         trackId: "",
         operatorTime: "",
       },
@@ -259,13 +313,77 @@ export default {
         ],
       },
       downloadLoading: false,
+      dialogPvVisible: false,
+      modifyDate: undefined,
       dialogTitle: "送装",
+      columnList: [
+        {
+          label: "车号",
+          value: true,
+        },
+        {
+          label: "发站",
+          value: true,
+        },
+        {
+          label: "物资",
+          value: true,
+        },
+        {
+          label: "去向",
+          value: true,
+        },
+        {
+          label: "当前股道",
+          value: true,
+        },
+        {
+          label: "入厂时间",
+          value: true,
+        },
+        {
+          label: "送检时间",
+          value: true,
+        },
+        {
+          label: "取样完成时间",
+          value: true,
+        },
+        {
+          label: "送妥时间",
+          value: true,
+        },
+        {
+          label: "送装时间",
+          value: true,
+        },
+        {
+          label: "装好时间",
+          value: true,
+        },
+        {
+          label: "出厂时间",
+          value: true,
+        },
+        {
+          label: "预排时间",
+          value: true,
+        },
+        {
+          label: "股道记录",
+          value: true,
+        },
+        {
+          label: "状态",
+          value: true,
+        },
+      ],
     };
   },
 
   created() {
     // 初始化表格高度
-    this.toableHeight = document.documentElement.clientHeight - 300;
+    this.toableHeight = document.documentElement.clientHeight - 200;
     this.getList();
   },
   mounted() {
@@ -303,17 +421,24 @@ export default {
         sourceName: undefined,
         targetName: undefined,
         carCode: undefined,
-        startDate: undefined,
-        endDate: undefined,
+        startDate: moment()
+          .subtract(30, "days")
+          .startOf("day")
+          .format("YYYY-MM-DD 23:59:59"),
+        endDate: moment()
+          .subtract(0, "days")
+          .startOf("day")
+          .format("YYYY-MM-DD 23:59:59"),
       };
     },
     getList() {
       this.listLoading = true;
-      fetchList(this.listQuery).then((response) => {
+      this.listQuery.startDate = this.date[0];
+      this.listQuery.endDate = this.date[1];
+      getAllRport(this.listQuery).then((response) => {
         this.list = response.data;
         this.total = response.data.length;
         this.pageSplict();
-        this.listLoading = false;
       });
     },
     // 分页
@@ -366,128 +491,34 @@ export default {
       this.temp = {
         operatorType: undefined, //操作类型
         recodeId: "", //数据编号
-        trackName: "",
+        currentTrackName: "",
         trackId: "",
         operatorTime: "",
       };
     },
-    handleBack(row) {
-      this.$confirm("是否确认撤回?", "警告", {
-        confirmButtonText: "确定",
-        cancelButtonText: "取消",
-        type: "warning",
-      })
-        .then(function () {
-          return backWl(row.id);
-        })
-        .then(() => {
-          this.getList();
-          this.$message({
-            message: "完成操作",
-            type: "success",
-          });
+    handleExport() {
+      const loading = this.$loading({
+        lock: true,
+        text: "Loading",
+        spinner: "el-icon-loading",
+        background: "rgba(0, 0, 0, 0.7)",
+      });
+      let date = this.date;
+      this.download(
+        "train-stoptime/recode/getRecord/download ",
+        {
+          ...this.listQuery,
+        },
+        `火车停时管理[${moment(date[0]).format("YYYY-MM-DD")}至${moment(
+          date[1]
+        ).format("YYYY-MM-DD")}].xls`
+      )
+        .then((res) => {
+          loading.close();
         })
         .catch((err) => {
           console.log(err);
         });
-    },
-    updateData() {
-      this.$refs["dataForm"].validate((valid) => {
-        if (valid) {
-          let list = [];
-          for (let i = 0; i < this.list.length; i++) {
-            const element = this.list[i];
-            if (element.selected) {
-              console.log(element);
-              list.push(element);
-            }
-          }
-          for (let i = 0; i < list.length; i++) {
-            const element = list[i];
-            let data = {
-              trackId: this.temp.trackId,
-              trackName: this.temp.trackName,
-              operatorType: this.temp.operatorType,
-              recodeId: element.id,
-              operatorTime: parseTime(
-                this.temp.operatorTime,
-                "{y}-{m}-{d} {h}:{i}"
-              ),
-            };
-            loginSend(data).then((res) => {
-              if (res.code == "00000") {
-                if (i + 1 == list.length) {
-                  this.dialogFormVisible = false;
-                  this.$message({
-                    message: "完成操作",
-                    type: "success",
-                  });
-                  this.getList();
-                }
-              }
-            });
-          }
-        }
-      });
-    },
-    showForm(title) {
-      let flag = false;
-      for (let i = 0; i < this.list.length; i++) {
-        const element = this.list[i];
-        if (element.selected) {
-          flag = true;
-          break;
-        }
-      }
-      if (!flag) {
-        this.$message({
-          message: "请至少选中一项数据",
-          type: "warning",
-        });
-        return;
-      }
-      this.resetTemp();
-      switch (title) {
-        case "送检":
-          this.temp.operatorType = "SEND_CHECK";
-          break;
-        case "送妥":
-          this.temp.operatorType = "SEND_UNLOAD";
-          break;
-        case "送装":
-          this.temp.operatorType = "SEND_COMPLETE";
-          break;
-        default:
-          break;
-      }
-      this.dialogTitle = title;
-      this.dialogFormVisible = true;
-    },
-    selectRegion(Id) {
-      let ele = {};
-      for (let i = 0; i < this.regionOptions.length; i++) {
-        const element = this.regionOptions[i];
-        if (element.keyId == Id) {
-          ele = element;
-          break;
-        }
-      }
-      this.$set(this.temp, "trackId", "");
-      this.trackOptions = ele.children;
-      searchByParentId(ele.keyId).then((res) => {
-        if (res.code == "00000") {
-          this.trackOptions = res.data;
-        }
-      });
-    },
-    selectTrack(value) {
-      for (let i = 0; i < this.trackOptions.length; i++) {
-        const element = this.trackOptions[i];
-        if (element.keyId == value) {
-          this.temp.trackName = element.keyValue;
-          break;
-        }
-      }
     },
     // 获取当前页面中数据的开头与结尾
     getCurrentPage() {
@@ -534,3 +565,18 @@ export default {
   },
 };
 </script>
+
+<style lang="scss" scoped>
+.el-link {
+  margin-right: 10px;
+}
+.dialog_content {
+  margin-right: 10px;
+}
+::v-deep .el-table .el-table__cell {
+  padding: 0 !important;
+}
+.row_win {
+  margin-bottom: 20px;
+}
+</style>

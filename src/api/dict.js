@@ -43,6 +43,7 @@ export function getAllRegion() {
   });
 }
 
+// 根据区域获取路径下的股道信息
 export function searchByParentId(parentId) {
   return request({
     url: `/train-stoptime/dictionary/search/${parentId}`,

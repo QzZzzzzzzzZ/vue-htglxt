@@ -89,7 +89,7 @@
           <el-input v-model="form.keyValue" />
         </el-form-item>
         <el-form-item label="类型" prop="type">
-          <el-select v-model="form.type" placeholder="请选择">
+          <el-select v-model="form.type" disabled placeholder="请选择">
             <el-option
               v-for="item in options"
               :key="item.value"
@@ -124,6 +124,21 @@ export default {
     parentId: {
       deep: true,
       handler(val, oldVal) {
+        if (val == 0) {
+          this.options = [
+            {
+              value: "REGION",
+              label: "区域",
+            },
+          ];
+        } else {
+          this.options = [
+            {
+              value: "TRACK",
+              label: "股道",
+            },
+          ];
+        }
         this.getList();
       },
     },
@@ -188,6 +203,9 @@ export default {
           type: "success",
         });
         this.getList();
+        if (row.type == "REGION") {
+          this.$emit("upTree");
+        }
       });
     },
     handleUpdate(row) {
@@ -206,13 +224,15 @@ export default {
       this.getList();
     },
     handleAdd() {
+      this.form = {};
       this.form.parentId = this.parentId;
+      this.form.type = this.options[0].value;
       this.open = true;
       this.title = "新增字典";
     },
     cancel() {
-      this.open = false;
       this.form = {};
+      this.open = false;
     },
     submitForm() {
       this.$refs["form"].validate((valid) => {
@@ -223,9 +243,12 @@ export default {
                 message: "完成" + this.title,
                 type: "success",
               });
-              this.open = false;
               this.form = {};
+              this.open = false;
               this.getList();
+              if (this.form.type == "REGION") {
+                this.$emit("upTree");
+              }
             });
             return;
           }
@@ -237,6 +260,9 @@ export default {
             this.open = false;
             this.form = {};
             this.getList();
+            if (this.form.type == "REGION") {
+              this.$emit("upTree");
+            }
           });
         }
       });

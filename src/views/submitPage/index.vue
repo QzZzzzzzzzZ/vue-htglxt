@@ -1,6 +1,6 @@
 <template>
   <transition name="fade" mode="out-in">
-    <keep-alive :include='cachedViews'>
+    <keep-alive :include="cachedViews">
       <router-view></router-view>
     </keep-alive>
   </transition>
@@ -8,11 +8,11 @@
 
 <script>
 export default {
-  name: 'TableMain',
+  name: "TableMain",
   computed: {
     cachedViews() {
-      return this.$store.state.tagsView.cachedViews
-    }
-  }
-}
+      return this.$store.state.tagsView.cachedViews;
+    },
+  },
+};
 </script>

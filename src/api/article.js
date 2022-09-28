@@ -1,10 +1,20 @@
 import request from "@/utils/request";
+import qs from "qs";
 
-export function fetchList(query) {
+// 获取车辆数据
+export function fetchList(data) {
   return request({
-    url: "/article/list",
+    url: "/train-stoptime/recode/getRecord/logistic",
     method: "get",
-    params: query,
+    params: data,
+  });
+}
+// 获取报表数据
+export function getAllRport(data) {
+  return request({
+    url: `/train-stoptime/recode/getRecord/report`,
+    method: "get",
+    params: data,
   });
 }
 

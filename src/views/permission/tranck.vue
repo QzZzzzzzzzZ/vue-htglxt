@@ -32,7 +32,7 @@
     <!-- 分配角色数据权限对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
       <el-form :model="form" ref="form" label-width="80px" :rules="rules">
-        <el-form-item label="角色名称" prop="userId">
+        <el-form-item label="用户名称" prop="userId">
           <el-select
             v-model="form.userId"
             filterable
@@ -50,7 +50,7 @@
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="股道" prop="track">
+        <el-form-item label="股道" filterable prop="track">
           <el-select multiple v-model="form.track">
             <el-option
               v-for="item in trakOptions"
@@ -103,7 +103,7 @@ export default {
       // 表单校验
       rules: {
         userId: [
-          { required: true, message: "角色名称不能为空", trigger: "blur" },
+          { required: true, message: "用户名称不能为空", trigger: "blur" },
         ],
         track: [{ required: true, message: "股道不能为空", trigger: "blur" }],
       },
@@ -131,7 +131,7 @@ export default {
     /** 新增按钮操作 */
     addUser(row) {
       this.form = {};
-      this.title = "添加角色";
+      this.title = "添加用户";
       searchByParentId(row.keyId).then((res) => {
         let arr = res.data.map((ele) => {
           if (ele.type == "TRACK") {

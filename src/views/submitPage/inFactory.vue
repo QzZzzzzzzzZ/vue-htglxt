@@ -1,105 +1,104 @@
 <template>
   <div class="app-container calendar-list-container">
     <div class="filter-container">
-      <el-input
-        @keyup.enter.native="handleFilter"
-        style="width: 200px;"
-        class="filter-item"
-        :placeholder="'table.title'"
-        v-model="listQuery.title"
-      ></el-input>
-      <el-select
-        clearable
-        style="width: 90px"
-        class="filter-item"
-        v-model="listQuery.importance"
-        :placeholder="'table.importance'"
-      >
-        <el-option v-for="item in importanceOptions" :key="item" :label="item" :value="item"></el-option>
-      </el-select>
-      <el-select
-        clearable
-        class="filter-item"
-        style="width: 130px"
-        v-model="listQuery.type"
-        :placeholder="'table.type'"
-      >
-        <el-option
-          v-for="item in  calendarTypeOptions"
-          :key="item.key"
-          :label="item.display_name+'('+item.key+')'"
-          :value="item.key"
-        ></el-option>
-      </el-select>
-      <el-select
-        @change="handleFilter"
-        style="width: 140px"
-        class="filter-item"
-        v-model="listQuery.sort"
-      >
-        <el-option
-          v-for="item in sortOptions"
-          :key="item.key"
-          :label="item.label"
-          :value="item.key"
-        ></el-option>
-      </el-select>
-      <el-button
-        class="filter-item"
-        type="primary"
-        v-waves
-        icon="el-icon-search"
-        @click="handleFilter"
-      >{{'table.search'}}</el-button>
-      <el-button
-        class="filter-item"
-        style="margin-left: 10px;"
-        @click="handleCreate"
-        type="primary"
-        icon="el-icon-edit"
-      >{{'table.add'}}</el-button>
-      <el-button
-        class="filter-item"
-        type="primary"
-        :loading="downloadLoading"
-        v-waves
-        icon="el-icon-download"
-        @click="handleDownload"
-      >{{'table.export'}}</el-button>
+      <!-- 搜索 start -->
+      <el-form :model="listQuery" ref="queryForm" :inline="true" label-width="60px">
+        <el-form-item label="入厂时间" label-width="80px">
+          <el-date-picker
+            style="width: 230px"
+            unlink-panels
+            v-model="date"
+            size="small"
+            value-format="yyyy-MM-dd"
+            type="daterange"
+            range-separator="-"
+            @change="selectTime"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+          ></el-date-picker>
+        </el-form-item>
+        <el-form-item label="车号" prop="carCode">
+          <el-input
+            v-model="listQuery.carCode"
+            placeholder="请输入车号"
+            clearable
+            size="small"
+            style="width: 180px"
+            @keyup.enter.native="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="物资" prop="materialName">
+          <el-input
+            v-model="listQuery.materialName"
+            placeholder="请输入物资名称"
+            clearable
+            size="small"
+            style="width: 180px"
+            @keyup.enter.native="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="发站" prop="sourceName">
+          <el-input
+            v-model="listQuery.sourceName"
+            placeholder="请输入发站"
+            clearable
+            size="small"
+            style="width: 120px"
+            @keyup.enter.native="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="去向" prop="targetName">
+          <el-input
+            v-model="listQuery.targetName"
+            placeholder="请输入去向"
+            clearable
+            size="small"
+            style="width: 120px"
+            @keyup.enter.native="handleQuery"
+          />
+        </el-form-item>
+        <el-form-item label="状态" prop="status">
+          <el-select v-model="listQuery.status" placeholder="状态" size="small" style="width: 120px">
+            <el-option
+              v-for="order in statusOptions"
+              :key="order.key"
+              :label="order.label"
+              :value="order.key"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+          <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
+        </el-form-item>
+      </el-form>
     </div>
 
     <el-table
       :key="tableKey"
-      :data="list"
+      :data="showList"
+      :max-height="toableHeight"
       v-loading="listLoading"
       element-loading-text="给我一点时间"
       border
       fit
       highlight-current-row
-      style="width: 100%"
+      style="width: 100%;margin-top:10px;"
     >
-      <el-table-column align="center" :label="'table.id'" width="65">
+      <el-table-column align="center" prop="carCode" label="车号" />
+      <el-table-column align="center" prop="materialName" label="物资" width="200" />
+      <el-table-column align="center" label="入厂时间" width="180">
         <template slot-scope="scope">
-          <span>{{scope.row.id}}</span>
+          <span>{{parseTime(scope.row.grossTime,'{y}-{m}-{d} {h}:{i}')}}</span>
         </template>
       </el-table-column>
-      <el-table-column align="center" prop="ch" label="车号" />
-      <el-table-column align="center" prop="wz" label="物资" />
-      <el-table-column align="center" label="过毛时间">
+      <el-table-column align="center" prop="sourceName" label="发站" />
+      <el-table-column align="center" prop="targetName" label="去向" />
+      <el-table-column align="center" prop="currentTrackName" label="股道" />
+      <el-table-column align="center" :label="'操作'" class-name="small-padding fixed-width">
         <template slot-scope="scope">
-          <span>{{scope.row.timestamp | parseTime('{y}-{m}-{d} {h}:{i}')}}</span>
-        </template>
-      </el-table-column>
-      <el-table-column align="center" prop="fz" label="发站" />
-      <el-table-column align="center" prop="qx" label="去向" />
-      <el-table-column align="center" prop="gd" label="股道" />
-      <el-table-column
-        align="center"
-        :label="'table.actions'"
-        class-name="small-padding fixed-width"
-      >
-        <template slot-scope="scope">
-          <el-button type="primary" size="mini" @click="handleUpdate(scope.row)">{{'table.edit'}}</el-button>
+          <el-link type="primary" @click="handleUpdate(scope.row)">修改</el-link>
         </template>
       </el-table-column>
     </el-table>
@@ -109,15 +108,15 @@
         background
         @size-change="handleSizeChange"
         @current-change="handleCurrentChange"
-        :current-page.sync="listQuery.page"
+        :current-page.sync="pageQuery.page"
         :page-sizes="[10,20,30, 50]"
-        :page-size="listQuery.limit"
+        :page-size="pageQuery.limit"
         layout="total, sizes, prev, pager, next, jumper"
         :total="total"
       ></el-pagination>
     </div>
 
-    <el-dialog :title="textMap[dialogStatus]" :visible.sync="dialogFormVisible">
+    <el-dialog title="修改车辆信息" :visible.sync="dialogPvVisible" width="500">
       <el-form
         :rules="rules"
         ref="dataForm"
@@ -126,85 +125,65 @@
         label-width="90px"
         style="width: 400px; margin-left:50px;"
       >
-        <el-form-item label="车号" prop="ch">
-          <el-select class="filter-item" v-model="temp.type" placeholder="请选择">
-            <el-option
-              v-for="item in  calendarTypeOptions"
-              :key="item.key"
-              :label="item.display_name"
-              :value="item.key"
-            ></el-option>
-          </el-select>
+        <el-form-item label="车号" prop="carCode">
+          <el-input
+            v-model="temp.carCode"
+            placeholder="车号"
+            clearable
+            size="small"
+            style="width: 220px"
+            @keyup.enter.native="handleQuery"
+          />
         </el-form-item>
-        <el-form-item label="过毛时间" prop="gmsj">
-          <el-date-picker v-model="temp.timestamp" type="datetime" placeholder="请选择时间"></el-date-picker>
+        <el-form-item label="物资" prop="materialName">
+          <el-input
+            v-model="temp.materialName"
+            placeholder="物资名称"
+            clearable
+            size="small"
+            style="width: 220px"
+            @keyup.enter.native="handleQuery"
+          />
         </el-form-item>
-        <el-form-item label="物资" prop="wz">
-          <el-input v-model="temp.wz"></el-input>
+        <el-form-item label="发站" prop="sourceName">
+          <el-input
+            v-model="temp.sourceName"
+            placeholder="发站"
+            clearable
+            size="small"
+            style="width: 220px"
+            @keyup.enter.native="handleQuery"
+          />
         </el-form-item>
-        <el-form-item label="发站">
-          <el-select class="filter-item" v-model="temp.fz" placeholder="请选择">
-            <el-option v-for="item in  statusOptions" :key="item" :label="item" :value="item"></el-option>
-          </el-select>
+        <el-form-item label="去向" prop="targetName">
+          <el-input
+            v-model="temp.targetName"
+            placeholder="去向"
+            clearable
+            size="small"
+            style="width: 220px"
+            @keyup.enter.native="handleQuery"
+          />
         </el-form-item>
-        <el-form-item label="去向">
-          <el-select class="filter-item" v-model="temp.qx" placeholder="请选择">
-            <el-option v-for="item in  statusOptions" :key="item" :label="item" :value="item"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="股道">
-          <el-select class="filter-item" v-model="temp.gd" placeholder="请选择">
-            <el-option v-for="item in  statusOptions" :key="item" :label="item" :value="item"></el-option>
-          </el-select>
+        <el-form-item label="入厂时间" prop="grossTime">
+          <el-date-picker v-model="temp.grossTime" type="datetime" placeholder="选择日期"></el-date-picker>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="dialogFormVisible = false">{{'table.cancel'}}</el-button>
-        <el-button
-          v-if="dialogStatus=='create'"
-          type="primary"
-          @click="createData"
-        >{{'table.confirm'}}</el-button>
-        <el-button v-else type="primary" @click="updateData">{{'table.confirm'}}</el-button>
+        <el-button @click="dialogPvVisible = false">取消</el-button>
+        <el-button type="primary" @click="updateData">确定</el-button>
       </div>
-    </el-dialog>
-
-    <el-dialog title="Reading statistics" :visible.sync="dialogPvVisible">
-      <el-table :data="pvData" border fit highlight-current-row style="width: 100%">
-        <el-table-column prop="key" label="Channel"></el-table-column>
-        <el-table-column prop="pv" label="Pv"></el-table-column>
-      </el-table>
-      <span slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="dialogPvVisible = false">{{'table.confirm'}}</el-button>
-      </span>
     </el-dialog>
   </div>
 </template>
 
 <script>
-import {
-  fetchList,
-  fetchPv,
-  createArticle,
-  updateArticle,
-} from "@/api/article";
+import { fetchList } from "@/api/article";
+import { modifyWl } from "@/api/api";
 import waves from "@/directive/waves"; // 水波纹指令
 import { parseTime } from "@/utils";
 
-const calendarTypeOptions = [
-  { key: "CN", display_name: "China" },
-  { key: "US", display_name: "USA" },
-  { key: "JP", display_name: "Japan" },
-  { key: "EU", display_name: "Eurozone" },
-];
-
-const calendarTypeKeyValue = calendarTypeOptions.reduce((acc, cur) => {
-  acc[cur.key] = cur.display_name;
-  return acc;
-}, {});
-
 export default {
-  name: "inFactory",
   directives: {
     waves,
   },
@@ -212,24 +191,34 @@ export default {
     return {
       tableKey: 0,
       list: null,
+      showList: null,
       total: null,
-      listLoading: true,
-      listQuery: {
+      listLoading: false,
+      toableHeight: 600, // 表格高度
+      pageQuery: {
         page: 1,
-        limit: 10,
-        importance: undefined,
-        title: undefined,
-        type: undefined,
-        sort: "+id",
+        limit: 50,
       },
-      importanceOptions: [1, 2, 3],
-      calendarTypeOptions,
-      sortOptions: [
-        { label: "ID Ascending", key: "+id" },
-        { label: "ID Descending", key: "-id" },
+      listQuery: {
+        status: null,
+        sourceName: undefined,
+        targetName: undefined,
+        carCode: undefined,
+        startDate: undefined,
+        endDate: undefined,
+      },
+      date: [],
+      statusOptions: [
+        { label: "待操作", key: null },
+        { label: "登记", key: "REGISTER" },
+        { label: "送检", key: "SEND_CHECK" },
+        { label: "取样完成", key: "COMPLETE_CHECK" },
+        { label: "送妥", key: "SEND_PROPERLY" },
+        { label: "报空", key: "COMPLETE_EMPTY" },
+        { label: "送装", key: "SEND_PACK" },
+        { label: "装好", key: "COMPLETE_PACK" },
+        // { label: "出厂", key: "LEAVE_FACTORY" },
       ],
-      statusOptions: ["A", "B", "C"],
-      showReviewer: false,
       temp: {
         id: undefined,
         importance: 1,
@@ -247,167 +236,139 @@ export default {
       },
       dialogPvVisible: false,
       pvData: [],
+      modifyDate: undefined,
       rules: {
-        type: [
-          { required: true, message: "type is required", trigger: "change" },
+        carCode: [
+          { required: true, message: "车号不可为空", trigger: "blur" },
+          { min: 7, max: 7, message: "请检查车牌号是否正确", trigger: "blur" },
         ],
-        timestamp: [
-          {
-            type: "date",
-            required: true,
-            message: "timestamp is required",
-            trigger: "change",
-          },
+        materialName: [
+          { required: true, message: "物资不可为空", trigger: "blur" },
         ],
-        title: [
-          { required: true, message: "title is required", trigger: "blur" },
+        sourceName: [
+          { required: true, message: "发站不可为空", trigger: "blur" },
+        ],
+        targetName: [
+          { required: true, message: "去向不可为空", trigger: "blur" },
+        ],
+        grossTime: [
+          { required: true, message: "时间不可为空", trigger: "blur" },
         ],
       },
-      downloadLoading: false,
     };
   },
-  filters: {
-    statusFilter(status) {
-      const statusMap = {
-        published: "success",
-        draft: "info",
-        deleted: "danger",
-      };
-      return statusMap[status];
-    },
-    typeFilter(type) {
-      return calendarTypeKeyValue[type];
-    },
-  },
   created() {
+    // 初始化表格高度
+    this.toableHeight = document.documentElement.clientHeight - 300;
     this.getList();
   },
   methods: {
+    // 搜索
+    handleQuery() {
+      this.getList();
+    },
+    //参数重置
+    resetQuery() {
+      this.listQuery = {
+        page: 1,
+        limit: 50,
+        status: null,
+        sourceName: undefined,
+        targetName: undefined,
+        carCode: undefined,
+        startDate: undefined,
+        endDate: undefined,
+      };
+    },
     getList() {
       this.listLoading = true;
       fetchList(this.listQuery).then((response) => {
-        this.list = response.data.items;
-        this.total = response.data.total;
-        this.listLoading = false;
+        this.list = response.data;
+        this.total = response.data.length;
+        this.pageSplict();
       });
     },
-    handleFilter() {
-      this.listQuery.page = 1;
-      this.getList();
+    // 分页
+    pageSplict() {
+      let limit = this.pageQuery.limit;
+      let page = this.pageQuery.page;
+      let total = this.total;
+      let showList = [];
+      let min = (page - 1) * limit;
+      let max = page * limit;
+      if (this.list.length != 0) {
+        // 边缘值处理  最后一页特殊处理
+        let n = Math.ceil(total / limit);
+        if (page == n) {
+          // 获取最后一页数据
+          let m = total % limit;
+          if (m == 0) {
+            showList = this.listSplict(min, max, this.list);
+          } else {
+            max = min + m;
+            showList = this.listSplict(min, max, this.list);
+          }
+        } else {
+          showList = this.listSplict(min, max, this.list);
+        }
+      }
+      this.showList = showList;
+      this.listLoading = false;
+    },
+    listSplict(min, max, list) {
+      let showList = [];
+      for (let index = min; index < max; index++) {
+        const element = list[index];
+        showList.push(element);
+      }
+      return showList;
     },
     handleSizeChange(val) {
-      this.listQuery.limit = val;
-      this.getList();
+      this.pageQuery.limit = val;
+      this.pageSplict();
     },
     handleCurrentChange(val) {
-      this.listQuery.page = val;
-      this.getList();
+      this.pageQuery.page = val;
+      this.pageSplict();
     },
-    handleModifyStatus(row, status) {
-      this.$message({
-        message: "操作成功",
-        type: "success",
-      });
-      row.status = status;
+    selectTime(e) {
+      this.listQuery.startDate = parseTime(e[0], "{y}-{m}-{d} 00:00:00");
+      this.listQuery.endDate = parseTime(e[1], "{y}-{m}-{d} 23:59:59");
     },
-    resetTemp() {
-      this.temp = {
-        id: undefined,
-        importance: 1,
-        remark: "",
-        timestamp: new Date(),
-        title: "",
-        status: "published",
-        type: "",
-      };
-    },
-    handleCreate() {
-      this.resetTemp();
-      this.dialogStatus = "create";
-      this.dialogFormVisible = true;
-      this.$nextTick(() => {
-        this.$refs["dataForm"].clearValidate();
-      });
-    },
-    createData() {
-      this.$refs["dataForm"].validate((valid) => {
-        if (valid) {
-          this.temp.id = parseInt(Math.random() * 100) + 1024; // mock a id
-          this.temp.author = "vue-element-admin";
-          createArticle(this.temp).then(() => {
-            this.list.unshift(this.temp);
-            this.dialogFormVisible = false;
-            this.$notify({
-              title: "成功",
-              message: "创建成功",
-              type: "success",
-              duration: 2000,
-            });
-          });
-        }
-      });
-    },
+    // 行内修改样式
     handleUpdate(row) {
-      this.temp = Object.assign({}, row); // copy obj
-      this.temp.timestamp = new Date(this.temp.timestamp);
-      this.dialogStatus = "update";
-      this.dialogFormVisible = true;
-      this.$nextTick(() => {
-        this.$refs["dataForm"].clearValidate();
-      });
+      this.temp = row;
+      this.dialogPvVisible = true;
     },
     updateData() {
       this.$refs["dataForm"].validate((valid) => {
         if (valid) {
-          const tempData = Object.assign({}, this.temp);
-          tempData.timestamp = +new Date(tempData.timestamp); // change Thu Nov 30 2017 16:41:05 GMT+0800 (CST) to 1512031311464
-          updateArticle(tempData).then(() => {
-            for (const v of this.list) {
-              if (v.id === this.temp.id) {
-                const index = this.list.indexOf(v);
-                this.list.splice(index, 1, this.temp);
-                break;
-              }
+          let data = this.temp;
+          data.grossTime = new Date(data.grossTime);
+          data.grossTime = parseTime(data.grossTime, "{y}-{m}-{d} {h}:{i}");
+          modifyWl(data).then((res) => {
+            if (res.code == "00000") {
+              this.dialogPvVisible = false;
+              this.$message({
+                message: "修改成功",
+                type: "success",
+              });
+              this.getList();
             }
-            this.dialogFormVisible = false;
-            this.$notify({
-              title: "成功",
-              message: "更新成功",
-              type: "success",
-              duration: 2000,
-            });
           });
         }
       });
     },
-    handleDelete(row) {
-      this.$notify({
-        title: "成功",
-        message: "删除成功",
-        type: "success",
-        duration: 2000,
-      });
-      const index = this.list.indexOf(row);
-      this.list.splice(index, 1);
-    },
-    handleFetchPv(pv) {
-      fetchPv(pv).then((response) => {
-        this.pvData = response.data.pvData;
-        this.dialogPvVisible = true;
-      });
-    },
-    handleDownload() {},
-    formatJson(filterVal, jsonData) {
-      return jsonData.map((v) =>
-        filterVal.map((j) => {
-          if (j === "timestamp") {
-            return parseTime(v[j]);
-          } else {
-            return v[j];
-          }
-        })
-      );
-    },
   },
 };
 </script>
+
+<style lang="scss" scoped>
+.dialog_content {
+  display: inline-block;
+  margin: 0 5px 0 10px;
+}
+::v-deep .el-scrollbar__wrap {
+  margin-bottom: 0 !important;
+}
+</style>

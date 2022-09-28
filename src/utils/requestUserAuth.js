@@ -9,7 +9,7 @@ axios.defaults.headers["Content-Type"] =
 // create an axios instance
 const service = axios.create({
   // baseURL: process.env.VUE_APP_BASE_API,
-  baseURL: "http://192.168.18.79",
+  baseURL: "http://59.52.36.181:9702/authority",
   // withCredentials: true, // send cookies when cross-domain requests
   timeout: 5000, // request timeout
 });

@@ -6,7 +6,18 @@
       <el-table-column label="分配股道数" prop="trackNum" align="center" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope" v-if="scope.row.roleId !== 1">
-          <el-button size="mini" type="text" icon="el-icon-plus" @click="addUser(scope.row)">添加用户</el-button>
+          <el-button
+            size="mini"
+            type="text"
+            icon="el-icon-plus"
+            @click="addUserHandel(scope.row)"
+          >查看</el-button>
+          <el-button
+            size="mini"
+            type="text"
+            icon="el-icon-delete"
+            @click="deleteHandel(scope.row)"
+          >清除权限</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -26,40 +37,13 @@
 
     <!-- 分配角色数据权限对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
-      <el-form :model="form" ref="form" label-width="80px" :rules="rules">
-        <el-form-item label="角色名称" prop="userId">
-          <el-select
-            v-model="form.userId"
-            filterable
-            remote
-            reserve-keyword
-            placeholder="请输入用户名、拼音、电话"
-            :remote-method="remoteMethod"
-            :loading="selectLoading"
-          >
-            <el-option
-              v-for="item in userOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="股道" prop="track">
-          <el-select multiple v-model="form.track">
-            <el-option
-              v-for="item in trakOptions"
-              :key="item.value"
-              :label="item.label"
-              :value="item.value"
-            ></el-option>
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submit">确 定</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
+      <el-descriptions :column="2">
+        <el-descriptions-item label="用户名">{{user.userName}}</el-descriptions-item>
+        <el-descriptions-item label="管理股道数">{{user.trackNum}}</el-descriptions-item>
+        <el-descriptions-item label="股道" v-if="regionOptions.length>0">
+          <el-tree :data="regionOptions" default-expand-all :props="props"></el-tree>
+        </el-descriptions-item>
+      </el-descriptions>
     </el-dialog>
   </div>
 </template>
@@ -71,7 +55,6 @@ import {
   addUser,
   searchUserByParent,
 } from "@/api/auth.js";
-import { getAllRegion, searchByParentId } from "@/api/dict.js";
 import { getUser } from "@/api/user.js";
 export default {
   data() {
@@ -88,8 +71,8 @@ export default {
       // 是否显示弹出层
       open: false,
       // 数据范围选项
-      trakOptions: [],
-      userOptions: [],
+      regionOptions: [],
+      user: {},
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -98,12 +81,15 @@ export default {
         roleKey: undefined,
         status: undefined,
       },
+      props: {
+        label: "keyValue",
+      },
       // 表单参数
       form: {},
       // 表单校验
       rules: {
         userId: [
-          { required: true, message: "角色名称不能为空", trigger: "blur" },
+          { required: true, message: "用户名称不能为空", trigger: "blur" },
         ],
         track: [{ required: true, message: "股道不能为空", trigger: "blur" }],
       },
@@ -124,82 +110,30 @@ export default {
     // 取消按钮（数据权限）
     cancel() {
       this.open = false;
-      this.form = {};
-      this.trakOptions = [];
-      this.userOptions = [];
     },
     /** 新增按钮操作 */
-    addUser(row) {
-      this.form = {};
-      this.title = "添加角色";
-      searchByParentId(row.keyId).then((res) => {
-        let arr = res.data.map((ele) => {
-          if (ele.type == "TRACK") {
-            let e = {
-              value: ele.keyId,
-              label: ele.keyValue,
-            };
-            return e;
+    async addUserHandel(row) {
+      this.user = row;
+      this.title = "查看";
+      const userId = this.$store.getters.userId;
+      let res = await searchUser(userId);
+      if (res.code == "00000") {
+        this.regionOptions = [];
+        for (let i = 0; i < res.data.length; i++) {
+          let ele = res.data[i];
+          this.open = true;
+          let childrenRes = await searchUserByParent(userId, ele.keyId);
+          if (childrenRes.code == "00000") {
+            let arr = childrenRes.data.map((e) => {
+              return e;
+            });
+            ele.children = arr;
+            this.regionOptions.push(ele);
           }
-        });
-        this.trakOptions = arr;
-        this.open = true;
-      });
-    },
-    remoteMethod(query) {
-      if (query !== "") {
-        this.selectLoading = true;
-        getUser(query).then((res) => {
-          let arr = res.data.map((ele) => {
-            let e = {
-              label: ele.username,
-              value: ele.userId,
-            };
-            return e;
-          });
-          this.userOptions = arr;
-          this.selectLoading = false;
-        });
-      } else {
-        this.userOptions = [];
+        }
       }
     },
-    /** 提交按钮（数据权限） */
-    submit() {
-      this.$refs["form"].validate((valid) => {
-        if (valid) {
-          let userName = this.userOptions.filter((ele) => {
-            if (ele.value == this.form.userId) {
-              return ele.label;
-            }
-          });
-          let params = {};
-          params.userName = userName[0].label;
-          params.userId = this.form.userId;
-          let trackIds = "";
-          this.form.track.map((ele) => {
-            trackIds += ele + ",";
-          });
-          params.trackIds = trackIds;
-          addUser(params).then((response) => {
-            if (response.code == "00000") {
-              this.$message({
-                message: "完成" + this.title,
-                type: "success",
-              });
-              this.open = false;
-              this.cancel();
-              this.getList();
-            } else {
-              this.$message({
-                message: response.msg,
-                type: "error",
-              });
-            }
-          });
-        }
-      });
-    },
+
     handleSizeChange(val) {
       this.listQuery.size = val;
       this.getList();
@@ -207,6 +141,26 @@ export default {
     handleCurrentChange(val) {
       this.listQuery.page = val;
       this.getList();
+    },
+    deleteHandel(row) {
+      let params = {};
+      params.trackIds = "";
+      params.userName = row.userName;
+      params.userId = row.userId;
+      addUser(params).then((response) => {
+        if (response.code == "00000") {
+          this.$message({
+            message: "完成操作",
+            type: "success",
+          });
+          this.getList();
+        } else {
+          this.$message({
+            message: response.msg,
+            type: "error",
+          });
+        }
+      });
     },
   },
 };
